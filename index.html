@@ -430,4 +430,56 @@ let liveLoaded=false;
 function handleLiveDataFast(j,isFromCache=false){try{if(!j||!j.tabs)return false;let total=0,details=[];for(const k in j.tabs){const rows=j.tabs[k];if(!rows||!rows.length)continue;if(k.toUpperCase().includes('FACILITY'))continue;if(typeof prep==='function'){try{prep(k,rows);total+=rows.length;details.push(k+':'+rows.length);}catch(e){}}}if(total>0){if(S['PLDT'])tab='PLDT';else tab=Object.keys(S)[0];const info=document.getElementById('info');if(info){const note=isFromCache?' (cache, updating...)':'';info.textContent='LIVE: '+total.toLocaleString()+' records ('+details.join(', ')+') | NO P: 407520'+note+' | '+new Date().toLocaleString();}if(typeof render==='function')render();try{if(typeof render2==='function')render2();}catch(e){}if(!isFromCache)saveToCache(j);liveLoaded=true;return true;}}catch(e){}return false;}
 async function loadLiveFast(){const info=document.getElementById('info');const cached=getCachedData();if(cached){handleLiveDataFast(cached,true);if(info)info.textContent+=' - Updating...';}else if(info)info.textContent='Loading live data (3-5 sec)...';try{const s1=document.createElement('script');s1.src=WEB_APP_URL+'?tab=PLDT&callback=handleLiveDataFast&t='+Date.now();s1.id='livePLDT';document.body.appendChild(s1);}catch(e){}setTimeout(async()=>{try{const r=await fetch(WEB_APP_URL+'?action=getAllData&t='+Date.now(),{mode:'cors'});const j=await r.json();if(j.tabs&&j.total>0){S={};handleLiveDataFast(j,false);return;}}catch(e){}try{const s2=document.createElement('script');s2.src=WEB_APP_URL+'?action=getAllData&callback=handleLiveDataFast&t='+Date.now();s2.id='liveAll';document.body.appendChild(s2);}catch(e){}},800);setTimeout(()=>{try{const s=document.createElement('script');s.src=WEB_APP_URL+'?tab=RED&callback=handleLiveDataFast&t='+Date.now();s.id='liveRED';document.body.appendChild(s);}catch(e){}},1500);setTimeout(()=>{try{const s=document.createElement('script');s.src=WEB_APP_URL+'?tab=VALIDATORS&callback=handleLiveDataFast&t='+Date.now();s.id='liveVAL';document.body.appendChild(s);}catch(e){}},2500);}
 setTimeout(loadLiveFast,300);setInterval(loadLiveFast,120000);
+
+// PATCH: Ensure full graphs render even with progressive loading
+(function(){
+  // Override handleLiveDataFast to keep S accumulation, not reset
+  window.handleLiveDataFast = function(j, isFromCache=false){
+    try{
+      if(!j || !j.tabs){ console.warn('No tabs', j); return false; }
+      let total=0,details=[];
+      // Don't reset S if from cache and we already have data - accumulate
+      if(!isFromCache || Object.keys(S).length===0){
+        // For full reload, clear S first only if not progressive single tab
+        if(j.tab === undefined){
+          S={};
+        }
+      }
+      for(const k in j.tabs){
+        const rows=j.tabs[k];
+        if(!rows || !rows.length) continue;
+        if(k.toUpperCase().includes('FACILITY')) continue;
+        if(typeof prep==='function'){
+          try{
+            prep(k, rows);
+            total+=rows.length;
+            details.push(k+':'+rows.length);
+          }catch(e){ console.error('prep failed', k, e); }
+        }
+      }
+      // Calculate total from S, not just this batch
+      let grandTotal=0;
+      for(const t in S){ grandTotal+=S[t].length; }
+      if(grandTotal>0 || total>0){
+        if(S['PLDT']) tab='PLDT'; else tab=Object.keys(S)[0];
+        const info=document.getElementById('info');
+        if(info){
+          const note=isFromCache?' (cache)':'';
+          const displayTotal = grandTotal>0 ? grandTotal : total;
+          info.textContent='LIVE: '+displayTotal.toLocaleString()+' total (PLDT:'+(S['PLDT']?S['PLDT'].length:0)+' RED:'+(S['RED']?S['RED'].length:0)+' VALIDATORS:'+(S['VALIDATORS']?S['VALIDATORS'].length:0)+') | NO P: 407520'+note+' | '+new Date().toLocaleString();
+        }
+        // Call FULL renders - this is what populates graphs
+        if(typeof render==='function'){ try{ render(); }catch(e){ console.error('render error', e); } }
+        if(typeof render2==='function'){ try{ render2(); }catch(e){ console.error('render2 error', e); } }
+        if(typeof saveToCache==='function' && !isFromCache && j.tab===undefined){ 
+          try{ localStorage.setItem('pldt_v7_cache', JSON.stringify({tabs: S, total: grandTotal})); localStorage.setItem('pldt_v7_time', Date.now().toString()); }catch(e){}
+        }
+        liveLoaded=true;
+        console.log('GRAPHS LOADED:', grandTotal, details);
+        return true;
+      }
+    }catch(e){ console.error('handleLiveDataFast error', e); }
+    return false;
+  };
+})();
 </script><button id="vsw" style="position:fixed;right:10px;bottom:10px;z-index:9999;padding:8px 12px;border-radius:999px;border:1px solid #ccc;background:#fff">Switch view</button></body></html>
