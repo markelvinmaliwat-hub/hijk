@@ -690,4 +690,60 @@ async function loadLiveFast(){
   setTimeout(()=>{try{const s=document.createElement('script');s.src=WEB_APP_URL+'?tab=VALIDATORS&callback=handleLiveDataFast&t='+Date.now();s.id='liveVAL';document.body.appendChild(s);}catch(e){}},2500);
 }
 setTimeout(loadLiveFast,300);setInterval(loadLiveFast,120000);
-</script><button id="vsw" style="position:fixed;right:10px;bottom:10px;z-index:9999;padding:8px 12px;border-radius:999px;border:1px solid #ccc;background:#fff">Switch view</button></body></html>
+</script>
+<style id="clickable-fix-v9">
+button, #tabs button, #loginBtn, #vsw, input[type="file"], input#lu, select, #ag, #q, #mo { pointer-events:auto !important; cursor:pointer !important; }
+#tabs, #tabs button, .tabs, header, #info, #login { pointer-events:auto !important; }
+#info { pointer-events:none !important; }
+#info * { pointer-events:auto !important; }
+body.lo { pointer-events:auto !important; }
+.overlay, .backdrop, .lo::before { pointer-events:none !important; }
+#tabs button.on { pointer-events:auto !important; }
+</style>
+<script id="clickable-js-v9">
+(function(){
+  function fixClick(){
+    document.querySelectorAll('button').forEach(b=>{ b.style.pointerEvents='auto'; b.style.cursor='pointer'; if(b.disabled) b.disabled=false; });
+    const lu=document.getElementById('lu'); if(lu){ lu.style.pointerEvents='auto'; lu.disabled=false; lu.readOnly=false; lu.style.cursor='text'; }
+    const tabs=document.getElementById('tabs'); if(tabs) tabs.style.pointerEvents='auto';
+  }
+  setTimeout(fixClick, 200);
+  setTimeout(fixClick, 1000);
+  setTimeout(fixClick, 3000);
+  document.addEventListener('click', fixClick, true);
+})();
+</script>
+
+<button id="vsw" type="button">📱 Switch to Mobile view</button>
+<script>
+(function(){
+  const h=document.documentElement,mt=document.querySelector('meta[name=viewport]'),b=document.getElementById('vsw');
+  if(!b) return;
+  let v=null;
+  try{v=localStorage.getItem('mm_view')}catch(e){}
+  if(v!=='m'&&v!=='w')v=Math.min(screen.width,innerWidth)<=900?'m':'w';
+  const apply=()=>{
+    h.classList.toggle('vm',v==='m');
+    h.classList.toggle('vw',v==='w');
+    if(mt) mt.setAttribute('content',v==='m'?'width=device-width, initial-scale=1, viewport-fit=cover':'width=1200, viewport-fit=cover');
+    b.textContent=v==='m'?'🖥️ Switch to Web view':'📱 Switch to Mobile view';
+    b.style.display='block';
+    b.style.pointerEvents='auto';
+    b.style.cursor='pointer';
+  };
+  b.onclick=()=>{
+    v=v==='m'?'w':'m';
+    try{localStorage.setItem('mm_view',v)}catch(e){}
+    apply();
+    try{logEv('VIEW MODE','View',v==='m'?'Mobile view':'Web view')}catch(e){}
+  };
+  apply();
+})();
+</script>
+<style>
+#vsw{position:fixed;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:99999;border:0;border-radius:999px;background:#111;color:#fff;padding:10px 14px;font-weight:700;font-size:13px;box-shadow:0 2px 10px rgba(0,0,0,.4);cursor:pointer;border-bottom:3px solid var(--red); display:block !important; pointer-events:auto !important;}
+#vsw:hover{background:#222;}
+html.vm .vw-only{display:none !important;}
+html.vw .vm-only{display:none !important;}
+</style>
+</body></html>
